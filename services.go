@@ -1,7 +1,9 @@
 package squadcast
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -22,6 +24,12 @@ type ServiceResponse struct {
 	Service *Service `json:"data"`
 }
 
+type CreateServiceRequest struct {
+	Name               string `json:"name"`
+	EscalationPolicyId string `json:"escalation_policy_id"`
+	Description        string `json:"description"`
+	EmailPrefix        string `json:"email_prefix"`
+}
 // https://apidocs.squadcast.com/#abb07c8a-d547-46eb-88f1-19378314ec4e
 func (c *Client) GetAllServices(ctx context.Context) ([]*Service, error) {
 	params := &requestParams{
@@ -65,5 +73,31 @@ func (c *Client) GetServiceByID(ctx context.Context, id string) (*Service, error
 		return nil, err
 	}
 
+	return serviceResponse.Service, nil
+}
+
+func (c *Client) CreateService(ctx context.Context, name, escalationPolicyId, description, emailPrefix string) (*Service, error) {
+
+	request := CreateServiceRequest{
+		Name:               name,
+		EscalationPolicyId: escalationPolicyId,
+		Description:        description,
+		EmailPrefix:        emailPrefix,
+	}
+
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(request)
+
+	params := &requestParams{
+		method:  "POST",
+		subPath: "/services/",
+		queries: map[string]string{},
+		body:    buffer,
+	}
+
+	var serviceResponse ServiceResponse
+	if err := c.doAPIRequest(ctx, params, &serviceResponse); err != nil {
+		return nil, err
+	}
 	return serviceResponse.Service, nil
 }
